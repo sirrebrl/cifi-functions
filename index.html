@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>CIFI Shards</title>
+        <link href="https://fonts.googleapis.com/css?family=Syncopate" rel="stylesheet" type="text/css">
+        <!-- <link rel="stylesheet" href="style.css"> -->
+    </head>
+    <body>
+
+        <p>Data is saved in the playerData object, which can be viewed and have values assigned to its properties directly. Use SavePlayerData() to save any direct changes made. All functions of convenience for modifying player data automatically call SavePlayerData(). Make sure all player data is accurate when utilizing predictive functions.</p>
+        <p>Player timing data includes tick (seconds), op (ticks), and study (ticks).</p>
+        <p>For run-based functions, use SetRunState() to define total run length and progress into run, both in ticks.</p>
+        <p>To predict cell goal achievement, use SetCellGoal() and SimulateGenTicks(). This is only suitable for short-term predictions.</p>
+        <p>The stats for SimulateGenTicks() should be in an array, formatted [currentCells, cellsPerTick, currentMk1, mk1PerTick, …]</p>
+        <p>For finding optimal shard milestones, singly or in generated paths, priorities can be set using SetShardPriorities(). Priorities should be in the format { t: (0 to 1), cells, mp, shards, rp } where “t” is the point in the run the given priorities apply to, and the priority types are positive or zero. Priorities will be automatically interpolated to give smooth transitions.</p>
+        <p>When utilizing shard functions, first set your shard state with shardActiveState = new ShardState().</p>
+        
+        <p>Useful Functions:</p>
+        <ul>
+        
+            <li>PlayerData
+            <ul>
+                <li>SavePlayerData()</li>
+                <li>SetCellGoal(goal)</li>
+                    <ul><li>If goal exceeds 1.8e308, input in quotes</li></ul>
+                <li>SetRunState(endTicks, currentTicks)</li>
+                    <ul><li>endTicks can be input with the TicksFromTime function to give total run length in time</li></ul>
+                <li>SetTiming(tick, op, study)</li>
+                    <ul><li>Tick in seconds, op in ticks, study in ticks</li></ul>
+                <li>SetEffOpLevels(mk1, mk2)</li>
+                    <ul><li>These are the mods in the lower-left that boost shards according to ops</li></ul>
+                <li>SetMilestoneSingle(milestone, level)</li>
+                    <ul><li>Milestone in index (milestone number - 1) or name (in lowercase)</li></ul>
+                <li>SetMilestoneAll(levels)</li>
+                    <ul><li>levels as an array [milestone#1, milestone#2, ...] including all 18 milestones</li></ul>
+                <li>SetKoiosData(crew, drill, brainium, multiStudy)</li>
+                    <ul><li>Current Unobtainium Drill and Big Brainium Thesis levels, and number of studies per study bar</li></ul>
+            </ul>
+            </li>
+            
+            <li>General
+            <ul>
+                <li>SimulateGenTicks(tickLimit, stats)</li>
+                    <ul>
+                        <li>tickLimit can be input with the TicksFromTime function</li>
+                        <li>stats in the format [current cells, cells per tick, current mk1, mk1 per tick, ...], and all numbers exceeding 1.8e308 wrapped in quotes</li>
+                    </ul>
+                <li>TimeToDemeterRank(currentRank, progress, goalRank)</li>
+                    <ul><li>currentRank apart from rank mods (not installs), and progress as ops toward next rank</li></ul>
+                <li>TimeToKoiosRank(currentRank, progress, goalRank)</li>
+                    <ul><li>currentRank apart from rank mods (not installs), and progress as studies toward next rank</li></ul>
+                <li>TimeFromTicks(ticks)</li>
+                <li>TicksFromTime(days, hours, minutes, seconds)</li>
+            </ul>
+            </li>
+            
+            <li>Shard Milestones
+            <ul>
+                <li>SetShardPriorities(prioritySet)</li>
+                    <ul>
+                        <li>priority set in the format {t, cells, mp, shards, rp}</li>
+                        <li>default priority is {t: 0, cells: 1, mp: 1, shards: 1, rp: 1}</li>
+                        <li>t should be a number between 0 and 1, representing percent of progress through run</li>
+                        <li>with only one priority set at t: 0, that priority set will be constant throughout the run</li>
+                    </ul>
+                <li>ClearShardPriorities()</li>
+                    <ul><li>resets priorities to only the default {t: 0, cells: 1, mp: 1, shards: 1, rp: 1}</li></ul>
+                <li>CalculateMilestoneTickCost(state, milestone, originLevel, targetLevel, fromZero)</li>
+                    <ul>
+                        <li>state is a ShardState object</li>
+                        <li>fromZero = true will reverse your current progress to give total tick cost, including ticks already passed</li>
+                    </ul>
+                <li>GetPriorityMilestone(composition, runState, multiPathing)</li>
+                    <ul>
+                        <li>running this function with no given parameters will use your current milestone composition and runState in playerData</li>
+                        <li>multiPathing is for use by higher functions and defaults to false</li>
+                    </ul>
+                <li>GenerateMilestonePath(composition, runState, multiPathing)</li>
+                <ul>
+                    <li>running this function with no given parameters will use your current milestone composition and runState in playerData</li>
+                    <li>multiPathing is for use by higher functions and defaults to false</li>
+                </ul>
+                <li>GetOptimalShardMilestone(composition, runState, multiPathing)</li>
+                <ul>
+                    <li>running this function with no given parameters will use your current milestone composition and runState in playerData</li>
+                    <li>multiPathing is for use by higher functions and defaults to false</li>
+                </ul>
+                <li>GenerateShardReversePath(cellPriority, mpPriority, rpPriority, composition, runState)</li>
+                <ul>
+                    <li>this function generates a complete shard+ milestone path in the alloted run time, and tests removing one at a time until the remaining time can be filled with an optimal path of other milestones</li>
+                    <li>running this function with only priority parameters will use your current milestone composition and runState in playerData</li>
+                    <li>the priorities for this function are distinct from the interpolated shard priorities, and will be applied to evaluate potential milestone paths as a whole</li>
+                </ul>
+            </ul>
+            </li>
+            
+            <li>Research
+            <ul>
+                <li>AddResearchTarget(name, cost, rpBonus, tickBonus)</li>
+                    <ul>
+                        <li>for researches with no bonus to rp, set rpBonus to 1</li>
+                        <li>for researches with no bonus to tick interval, set tickBonus to 0</li>
+                        <li>tick interval bonuses should be input as they appear in-game, eg -0.05</li>
+                    </ul>
+                <li>ClearResearchTargets()</li>
+                <li>CompleteResearchTarget(name)</li>
+                <li>ReorderResearchTargets(newOrder)</li>
+                    <ul>
+                        <li>newOrder as an array of the indices in the current target array</li>
+                        <li>for example, [0, 2, 1] will swap the last two targets in an array of 3 targets</li>
+                        <li>the current target array can be accessed with playerData.koios.researchTargets</li>
+                    </ul>
+                <li>ResearchTime(goal, rate, studies, testing, evoTicks)</li>
+                    <ul>
+                        <li>testing is for the ResearchPath() function and defaults to false</li>
+                        <li>evoTicks is for ticks until Koios evolution, and defaults to 1e10 for ignoring Koios evo</li>
+                    </ul>
+                <li>ResearchPath(initCost, rate, studies, ticksToEvo)</li>
+                    <ul><li>this function will predict the timing of all research targets in order</li></ul>
+            </ul>
+            </li>
+        
+        </ul>
+        
+
+        <script src="decimal.js"></script>
+        <script src="gamedb.js"></script>
+        <script src="saveData.js"></script>
+        <script src="index.js"></script>
+        <script src="milestonePathing.js"></script>
+        <script src="research.js"></script>
+    </body>
+</html>
