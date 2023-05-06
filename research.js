@@ -58,34 +58,41 @@ function ReorderResearchTargets(newOrder)
     SavePlayerData();
 }
 
-function ResearchTime(goal, rate, studies, testing = false, evoTicks = 0)
+function ResearchTime(goal, rate, studies, ticks, testing = false, evoTicks = 0)
 {
-    let bonus = playerData.koios.crew * playerData.koios.brainium * studies * 0.00001;
-    let baseRate = rate / bonus;
+    let hephBonus = playerData.hephaestus.crew * playerData.hephaestus.blueprints * ticks * 0.000002;
+    let koiBonus = playerData.koios.crew * playerData.koios.brainium * studies * 0.00001;
+    let ropBonus = playerData.mods.rop * studies * 0.01;
+    let baseRate = rate / (hephBonus * koiBonus * ropBonus);
 
-    let ticks = 0;
+    let progTicks = 0;
 
     while (goal > 0)
     {
         ticks += playerData.timing.study;
+        progTicks += playerData.timing.study;
         evoTicks += playerData.timing.study;
         goal -= rate;
         studies += playerData.koios.multiStudy;
-        bonus = playerData.koios.crew * playerData.koios.brainium * studies * 0.00001;
+
+        hephBonus = playerData.hephaestus.crew * playerData.hephaestus.blueprints * ticks * 0.000002;
+        koiBonus = playerData.koios.crew * playerData.koios.brainium * studies * 0.00001;
+        ropBonus = playerData.mods.rop * studies * 0.01;
+
         if (evoTicks >= playerData.koios.evo.ticks) { baseRate *= playerData.koios.evo.power; playerData.koios.evo.ticks = 1e10; console.log('Evo!'); }
-        rate = baseRate * bonus;
+        rate = baseRate * (hephBonus * koiBonus * ropBonus);
     }
 
     if (testing)
     {
         let result =
         {
-            ticks, studies, rate
+            ticks, progTicks, studies, rate
         };
         return result;
     }
 
-    let goalSeconds = Math.ceil(ticks * playerData.timing.tick);
+    let goalSeconds = Math.ceil(progTicks * playerData.timing.tick);
     let goalDays = Math.floor(goalSeconds / (3600 * 24));
     goalSeconds = goalSeconds % (3600 * 24);
     let goalHours = Math.floor(goalSeconds / 3600);
@@ -95,12 +102,12 @@ function ResearchTime(goal, rate, studies, testing = false, evoTicks = 0)
 
     let goalTime = `You will reach the goal within ${(goalDays > 0) ? goalDays + ' Days, ' : ''}${((goalHours < 10) ? '0' : '') + goalHours + ':'}${((goalMinutes < 10) ? '0' : '') + goalMinutes + ':'}${((goalSeconds < 10) ? '0' : '') + goalSeconds}`;
     console.log(goalTime);
-    goalDays = Math.ceil(ticks * playerData.timing.tick) / (3600 * 24);
+    goalDays = Math.ceil(progTicks * playerData.timing.tick) / (3600 * 24);
     goalDays = Math.round(goalDays * 100) / 100;
     console.log(`(${goalDays} Days)`);
 }
 
-function ResearchPath(initCost, rate, studies, ticksToEvo = 1e10)
+function ResearchPath(initCost, rate, studies, ticks, ticksToEvo = 1e10)
 {
     let targets = playerData.koios.researchTargets;
     let researches = [];
@@ -110,9 +117,10 @@ function ResearchPath(initCost, rate, studies, ticksToEvo = 1e10)
     playerData.koios.evo.ticks = ticksToEvo;
     let evoTicks = 0;
 
-    researches.push(ResearchTime(initCost, rate, studies, true, evoTicks));
-    totalTicks += researches[researches.length-1].ticks
-    evoTicks += researches[researches.length-1].ticks
+    researches.push(ResearchTime(initCost, rate, studies, ticks, true, evoTicks));
+    ticks = researches[researches.length-1].ticks;
+    totalTicks += researches[researches.length-1].progTicks;
+    evoTicks += researches[researches.length-1].progTicks;
     rate = researches[researches.length-1].rate * targets[0].rpBonus;
     studies = researches[researches.length-1].studies;
 
@@ -123,14 +131,15 @@ function ResearchPath(initCost, rate, studies, ticksToEvo = 1e10)
     }
 
     playerData.timing.tick += targets[0].tickBonus;
-    console.log(`${targets[0].name} reached in ${researches[researches.length-1].ticks} ticks.`);
-    console.log(TimeFromTicks(researches[researches.length-1].ticks));
+    console.log(`${targets[0].name} reached in ${researches[researches.length-1].progTicks} ticks.`);
+    console.log(TimeFromTicks(researches[researches.length-1].progTicks));
 
     for (let i = 1; i < targets.length; i++)
     {
-        researches.push(ResearchTime(targets[i].cost, rate, studies, true, evoTicks));
-        totalTicks += researches[researches.length-1].ticks
-        evoTicks += researches[researches.length-1].ticks
+        researches.push(ResearchTime(targets[i].cost, rate, studies, ticks, true, evoTicks));
+        ticks = researches[researches.length-1].ticks;
+        totalTicks += researches[researches.length-1].progTicks;
+        evoTicks += researches[researches.length-1].progTicks;
         rate = researches[researches.length-1].rate * targets[i].rpBonus;
         studies = researches[researches.length-1].studies;
 
@@ -141,8 +150,8 @@ function ResearchPath(initCost, rate, studies, ticksToEvo = 1e10)
         }
 
         playerData.timing.tick += targets[i].tickBonus;
-        console.log(`${targets[i].name} reached in ${researches[researches.length-1].ticks} ticks.`);
-        console.log(TimeFromTicks(researches[researches.length-1].ticks));
+        console.log(`${targets[i].name} reached in ${researches[researches.length-1].progTicks} ticks.`);
+        console.log(TimeFromTicks(researches[researches.length-1].progTicks));
     }
 
     if (totalTicks > 0) time.push(TimeFromTicks(totalTicks));
