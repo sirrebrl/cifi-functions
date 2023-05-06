@@ -252,15 +252,40 @@ function TicksFromTime(days, hours, minutes, seconds)
 
 function TimeFromTicks(ticks)
 {
-    let goalSeconds = Math.ceil(ticks * playerData.timing.tick);
-    let goalDays = Math.floor(goalSeconds / (3600 * 24));
-    goalSeconds = goalSeconds % (3600 * 24);
-    let goalHours = Math.floor(goalSeconds / 3600);
-    goalSeconds = goalSeconds % 3600;
-    let goalMinutes = Math.floor(goalSeconds / 60);
-    goalSeconds = goalSeconds % 60;
+    let goalTime;
+    let goalMillennia
+    let goalYears;
+    let goalDays;
+    let goalHours;
+    let goalMinutes;
 
-    let goalTime = `${(goalDays > 0) ? goalDays + ' Days, ' : ''}${((goalHours < 10) ? '0' : '') + goalHours + ':'}${((goalMinutes < 10) ? '0' : '') + goalMinutes + ':'}${((goalSeconds < 10) ? '0' : '') + goalSeconds}`;
+    let goalSeconds = Math.ceil(ticks * playerData.timing.tick);
+
+    if ((goalSeconds / (3600 * 24)) > 365250)
+    {
+        goalMillennia = Math.round(goalSeconds / (3600 * 24 * 365250) * 100) / 100;
+        goalTime = `${goalMillennia} ${goalMillennia > 1 ? 'Millennia' : 'Millennium'}`;
+    }
+    else if ((goalSeconds / (3600 * 24)) > (365.25 * 5))
+    {
+        goalYears = Math.round(goalSeconds / (3600 * 24 * 365.25) * 100) / 100;
+        goalTime = `${goalYears} Years`;
+    }
+    else 
+    {
+        goalYears = Math.floor(goalSeconds / (3600 * 24 * 365.25));
+        goalSeconds = goalSeconds % (3600 * 24 * 365.25);
+
+        goalDays = Math.floor(goalSeconds / (3600 * 24));
+        goalSeconds = goalSeconds % (3600 * 24);
+        goalHours = Math.floor(goalSeconds / 3600);
+        goalSeconds = goalSeconds % 3600;
+        goalMinutes = Math.floor(goalSeconds / 60);
+        goalSeconds = goalSeconds % 60;
+
+        goalTime = `${(goalYears > 0) ? goalYears + ' Years, ' : ''}${(goalDays > 0) ? goalDays + ' Days, ' : ''}${((goalHours < 10) ? '0' : '') + goalHours + ':'}${((goalMinutes < 10) ? '0' : '') + goalMinutes + ':'}${((goalSeconds < 10) ? '0' : '') + goalSeconds}`;
+    }
+
     return goalTime;
 }
 
@@ -341,8 +366,93 @@ function tickLoopsInTime(days, hours, minutes, loopsDone = 0, currentRequirement
     return newLoop - currentLoop;
 }
 
-/*
+function DemKoiRanking(demPreRank, koiPreRank, currentTicks, demInstallTarget = -1, koiInstallTarget = -1)
+{
+    let ticksToDemRanks = [0];
+    for (let i = 0; i < gameDB.demeterRanks.length; i++)
+    {
+        ticksToDemRanks.push(ticksToDemRanks[i] + (gameDB.demeterRanks[i] * playerData.timing.op));
+    }
+    let ticksToDemInstalls = 
+    [
+        {
+            ship: 'Demeter',
+            rank: 0,
+            install: demPreRank,
+            ticks: 0
+        }
+    ];
+    for (let i = 1; i < ticksToDemRanks.length; i++)
+    {
+        let install =
+        {
+            ship: 'Demeter',
+            rank: i,
+            install: i + demPreRank,
+            ticks: Math.max(0, ticksToDemRanks[i] - currentTicks)
+        };
+        ticksToDemInstalls.push(install);
+    }
 
-((StartTicksNeeded - TotalLoopTickReduction) + (loopNum * 60) + (loopNum * (power))) * (1 + (loopNum * 0.025))
+    let ticksToKoiRanks = [0];
+    for (let i = 0; i < gameDB.koiosRanks.length; i++)
+    {
+        ticksToKoiRanks.push(ticksToKoiRanks[i] + (gameDB.koiosRanks[i] * playerData.timing.study / playerData.koios.multiStudy));
+    }
+    let ticksToKoiInstalls = 
+    [
+        {
+            ship: 'Koios',
+            rank: 0,
+            install: koiPreRank,
+            ticks: 0
+        }
+    ];
+    for (let i = 1; i < ticksToKoiRanks.length; i++)
+    {
+        let install =
+        {
+            ship: 'Koios',
+            rank: i,
+            install: i + koiPreRank,
+            ticks: Math.max(0, ticksToKoiRanks[i] - currentTicks)
+        };
+        ticksToKoiInstalls.push(install);
+    }
 
-*/
+    let filteredDem = ticksToDemInstalls.filter(install => install.ticks > 0);
+    let filteredKoi = ticksToKoiInstalls.filter(install => install.ticks > 0);
+
+    let allInstalls = filteredDem.concat(filteredKoi);
+    allInstalls.sort((a,b) => { if (a.ticks < b.ticks) { return -1 } else if (b.ticks < a.ticks) { return 1; } else if (a.ship === 'Demeter') { return -1; } else { return 1; } });
+
+    let results = ['Goal Times:'];
+    let currentDemInstall = filteredDem[0].install;
+    let currentKoiInstall = filteredKoi[0].install;
+    for (let i = 0; i < allInstalls.length; i++)
+    {
+        let install = allInstalls[i];
+        if (install.ship === 'Demeter')
+        {
+            if (install.install === 6) { results.push(`Demeter 2+3 Unlock in ${TimeFromTicks(install.ticks)} at Koios Install ${currentKoiInstall}`); }
+            if (install.install === 11) { results.push(`Demeter 4+5 Unlock in ${TimeFromTicks(install.ticks)} at Koios Install ${currentKoiInstall}`); }
+            if (install.install === 51) { results.push(`Demeter 6+7 Unlock in ${TimeFromTicks(install.ticks)} at Koios Install ${currentKoiInstall}`); }
+
+            if (install.install === demInstallTarget) { results.push(`Demeter Target Install (${demInstallTarget}) in ${TimeFromTicks(install.ticks)} at Koios Install ${currentKoiInstall}`); }
+
+            currentDemInstall = install.install;
+        }
+        if (install.ship === 'Koios')
+        {
+            if (install.install === 6) { results.push(`Koios 2+3 Unlock in ${TimeFromTicks(install.ticks)} at Demeter Install ${currentDemInstall}`); }
+            if (install.install === 11) { results.push(`Koios 4+5 Unlock in ${TimeFromTicks(install.ticks)} at Demeter Install ${currentDemInstall}`); }
+            if (install.install === 41) { results.push(`Koios 6+7 Unlock in ${TimeFromTicks(install.ticks)} at Demeter Install ${currentDemInstall}`); }
+
+            if (install.install === koiInstallTarget) { results.push(`Koios Target Install (${koiInstallTarget}) in ${TimeFromTicks(install.ticks)} at Demeter Install ${currentDemInstall}`); }
+
+            currentKoiInstall = install.install;
+        }
+    }
+
+    console.log(results);
+}
