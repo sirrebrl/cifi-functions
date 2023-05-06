@@ -5,14 +5,18 @@ class ShardState
     rate = new Decimal(0);
     myOps = 0;
     myStudies = 0;
+    myTicks = 0;
     opBonuses = [1, 1, 1];
     studyBonus = 1;
+    tickBonus = 1;
+    ropBonus = 1;
 
-    constructor(shards, rate, ops, studies)
+    constructor(shards, rate, ops, studies, ticks)
     {
         this.shards = new Decimal(shards);
         this.myOps = ops;
         this.myStudies = studies;
+        this.myTicks = ticks;
         this.opBonuses =
             [
                 0.005 * this.myOps + 1,
@@ -20,15 +24,17 @@ class ShardState
                 0.002 * playerData.demeter.effOp[1] * this.myOps + 1
             ];
         this.studyBonus = 0.00003 * playerData.koios.crew * playerData.koios.drill * this.myStudies + 1;
+        this.tickBonus = 0.000001 * playerData.hephaestus.crew * playerData.hephaestus.machina * this.myTicks + 1;
+        this.ropBonus = 0.01 * playerData.mods.rop * this.myStudies + 1;
         this.rate = new Decimal(rate);
-        this.myBaseRate = this.rate.dividedBy(new Decimal(this.opBonuses[0] * this.opBonuses[1] * this.opBonuses[2] * this.studyBonus));
+        this.myBaseRate = this.rate.dividedBy(new Decimal(this.opBonuses[0] * this.opBonuses[1] * this.opBonuses[2] * this.studyBonus * this.tickBonus * this.ropBonus));
     }
     
     get baseRate() { return this.myBaseRate; }
     SetBaseRate(value)
     {
         this.myBaseRate = new Decimal(value);
-        this.rate = (this.myBaseRate.times(new Decimal(this.opBonuses[0] * this.opBonuses[1] * this.opBonuses[2] * this.studyBonus)));
+        this.rate = (this.myBaseRate.times(new Decimal(this.opBonuses[0] * this.opBonuses[1] * this.opBonuses[2] * this.studyBonus * this.tickBonus * this.ropBonus)));
     }
     get ops() { return this.myOps; }
     SetOps(value)
@@ -40,14 +46,22 @@ class ShardState
             0.001 * playerData.demeter.effOp[0] * this.myOps + 1,
             0.002 * playerData.demeter.effOp[1] * this.myOps + 1
         ];
-        this.rate = (this.myBaseRate.times(new Decimal(this.opBonuses[0] * this.opBonuses[1] * this.opBonuses[2] * this.studyBonus)));
+        this.rate = (this.myBaseRate.times(new Decimal(this.opBonuses[0] * this.opBonuses[1] * this.opBonuses[2] * this.studyBonus * this.tickBonus * this.ropBonus)));
     }
     get studies() { return this.myStudies; }
     SetStudies(value)
     {
         this.myStudies = value;
         this.studyBonus = 0.00003 * playerData.koios.crew * playerData.koios.drill * this.myStudies + 1;
-        this.rate = (this.myBaseRate.times(new Decimal(this.opBonuses[0] * this.opBonuses[1] * this.opBonuses[2] * this.studyBonus)));
+        this.ropBonus = 0.01 * playerData.mods.rop * this.myStudies + 1;
+        this.rate = (this.myBaseRate.times(new Decimal(this.opBonuses[0] * this.opBonuses[1] * this.opBonuses[2] * this.studyBonus * this.tickBonus * this.ropBonus)));
+    }
+    get ticks() { return this.myTicks; }
+    SetTicks(value)
+    {
+        this.myTicks = value;
+        this.tickBonus = 0.000001 * playerData.hephaestus.crew * playerData.hephaestus.machina * this.myTicks + 1;
+        this.rate = (this.myBaseRate.times(new Decimal(this.opBonuses[0] * this.opBonuses[1] * this.opBonuses[2] * this.studyBonus * this.tickBonus * this.ropBonus)));
     }
 
     static get emptyState()
@@ -56,7 +70,7 @@ class ShardState
     }
     static Duplicate(state)
     {
-        return new ShardState(state.shards, state.rate, state.ops, state.studies);
+        return new ShardState(state.shards, state.rate, state.ops, state.studies, state.ticks);
     }
 
     OpForward()
@@ -77,6 +91,14 @@ class ShardState
     {
         this.SetStudies(this.studies - playerData.koios.multiStudy);
     }
+    TickForward(ticks)
+    {
+        this.SetTicks(this.ticks + ticks);
+    }
+    TickBack(ticks)
+    {
+        this.SetTicks(this.ticks - ticks);
+    }
 
     AdvanceState(ticks, baseMultiplier = 1, zeroShards = false)
     {
@@ -88,6 +110,7 @@ class ShardState
             studyBars = Math.floor(subTicks / playerData.timing.study);
             subTicks = subTicks % playerData.timing.study;
             this.StudyForward(studyBars);
+            this.TickForward(playerData.timing.op);
             this.OpForward();
         }
         this.SetBaseRate(this.baseRate.times(baseMultiplier));
@@ -104,6 +127,29 @@ class ShardState
             if (ticks % playerData.timing.study === 0) { this.StudyBack(); }
         }
         return ticks;
+    }
+
+    SeekState(stateValue, seekRate = false)
+    {
+        let value = new Decimal(stateValue);
+        let subTicks = 0;
+        let studyBars = 0;
+
+        let baseTicks = this.myTicks;
+
+        while((seekRate && (this.rate.lessThan(value))) || this.shards.lessThan(value))
+        {
+            subTicks += playerData.timing.op;
+            studyBars = Math.floor(subTicks / playerData.timing.study);
+            subTicks = subTicks % playerData.timing.study;
+            this.StudyForward(studyBars);
+            this.TickForward(playerData.timing.op);
+            this.OpForward();
+        }
+
+        let finalTicks = this.myTicks - baseTicks;
+
+        console.log(TimeFromTicks(finalTicks));
     }
 }
 
@@ -517,6 +563,8 @@ function GetOptimalShardMilestone(composition = playerData.demeter.milestones, r
         let relativeBonus = GetRelativeMilestoneBonus(i, composition[i]);
         if (relativeBonus.shards > 1 || relativeBonus.tick < 0)
         {
+            // console.count('adding potential target');
+            // console.log(`milestone ${i}, current level ${composition[i]}`);
             potentialTargets.push(
                 {
                     milestone: i,
@@ -541,6 +589,8 @@ function GetOptimalShardMilestone(composition = playerData.demeter.milestones, r
             );
         }
     }
+
+    // console.countReset('adding potential target');
 
     potentialTargets.sort((a,b) => { if (a.shardCost.greaterThan(b.shardCost)) { return -1; } else { return 1; }});
 
@@ -625,7 +675,7 @@ function PathComparison(stepA, stepB, priorities, prepathA)
     let result =
     {
         stepBack: valueB > valueA && !identical,
-        prepath: (valueB > valueA) ? pathB : pathA,
+        prepath: (valueB > valueA && !identical) ? pathB : pathA,
         pathA
     };
 
@@ -714,6 +764,9 @@ function GenerateShardReversePath(cellPriority, mpPriority, rpPriority, composit
     {
         shardActiveState = steps[steps.length - 1].state;
         playerData.timing.tick = steps[steps.length - 1].tickRate;
+        // console.count('getting optimal milestone');
+        // console.log(composition);
+        // console.log(progressiveState);
         let nextMilestone = GetOptimalShardMilestone(composition, progressiveState, true);
 
         if (nextMilestone)
@@ -777,7 +830,130 @@ function GenerateShardReversePath(cellPriority, mpPriority, rpPriority, composit
     LoadPlayerData();
     shardActiveState = ShardState.Duplicate(originShardState);
 
+    PrintComposition(steps[steps.length - 1].composition, playerData.demeter.milestones)
+
     pathing = false;
 
     console.timeEnd('shardPathing');
+}
+
+function GenerateMilestoneBatch(currentShards, cellPriority, mpPriority, rpPriority, composition = [...playerData.demeter.milestones])
+{
+    currentShards = new Decimal(currentShards);
+
+    let originComp = [...composition];
+
+    while (currentShards > 0)
+    {
+        let potentialTargets = [];
+        let targetList = [];
+
+        let totalMilestones = 0;
+        for (let i = 0; i < gameDB.milestones.length; i++) { totalMilestones += composition[i]; }
+
+        for (let i = 0; i < gameDB.milestones.length; i++)
+        {
+            if (composition[i] === 100) continue;
+            if (totalMilestones < gameDB.milestones[i].unlock) continue;
+
+            potentialTargets.push(
+                {
+                    milestone: i,
+                    targetLevel: composition[i] + 1,
+                    shardCost: GetMilestoneCost(i, composition[i])
+                }
+            );
+    
+            let nextStage = GetMilestoneNextStage(i, composition[i]);
+            if (nextStage === 100 || nextStage === composition[i] + 1) continue;
+    
+            potentialTargets.push(
+                {
+                    milestone: i,
+                    targetLevel: nextStage,
+                    shardCost: GetMilestoneCost(i, composition[i], nextStage)
+                }
+            );
+        }
+
+        targetList = potentialTargets.filter(target => target.shardCost.lessThanOrEqualTo(currentShards));
+
+        if (targetList.length === 0) break;
+
+        if (targetList.length === 1)
+        {
+            composition[targetList[0].milestone] = targetList[0].targetLevel;
+            currentShards = currentShards.minus(targetList[0].shardCost);
+            continue;
+        }
+
+        for (let i = 0; i < targetList.length; i++)
+        {
+            let boosts = GetRelativeMilestoneBonus(targetList[i].milestone, composition[targetList[i].milestone], targetList[i].targetLevel);
+            let tickBoost = playerData.timing.tick / (playerData.timing.tick + boosts.tick);
+            let valueSet = 
+            {
+                cells: Math.log10(boosts.cells * tickBoost) * cellPriority,
+                mp: Math.log2(boosts.mp) * mpPriority,
+                rp: boosts.rp * tickBoost * rpPriority
+            };
+            let value = valueSet.cells + valueSet.mp + valueSet.rp;
+            // value = (new Decimal(value))
+            value = (new Decimal(value)).times(currentShards).dividedBy(targetList[i].shardCost);
+
+            targetList[i].boosts = boosts;
+            targetList[i].value = value;
+            targetList[i].valueSet = valueSet;
+        }
+
+        targetList.sort((a,b) => { if (a.value.lessThan(b.value)) { return 1; } else { return -1; } });
+
+        // CompareTargets(targetList);
+
+        composition[targetList[0].milestone] = targetList[0].targetLevel;
+        currentShards = currentShards.minus(targetList[0].shardCost);
+    }
+
+    PrintComposition(composition, originComp);
+}
+
+function PrintComposition(composition, originComp = [])
+{
+    let levelUp = (originComp.length > 0);
+    let result = ['Composition:'];
+
+    let totalMilestones = 0;
+    let totalAdditions = 0;
+
+    for (let i = 0; i < gameDB.milestones.length; i++)
+    {
+        let nextString = `#${i+1}: ${gameDB.milestones[i].name} at level ${composition[i]}`;
+        nextString += levelUp ? ` (+${composition[i] - originComp[i]})` : '';
+        result.push(nextString);
+
+        totalMilestones += composition[i];
+        if (levelUp) { totalAdditions += (composition[i] - originComp[i]); }
+    }
+
+    result.push(`Total Milestones: ${totalMilestones}${levelUp ? ` (+${totalAdditions})` : ''}`);
+
+    console.log(result);
+}
+
+function CompareTargets(targetList)
+{
+    let comparison = [];
+    for (let i = 0; i < targetList.length; i++)
+    {
+        let target =
+        {
+            name: gameDB.milestones[targetList[i].milestone].name,
+            cells: (Math.round(targetList[i].boosts.cells * 100) / 100) + ' / ' + targetList[i].valueSet.cells,
+            mp: (Math.round(targetList[i].boosts.mp * 100) / 100) + ' / ' + targetList[i].valueSet.mp,
+            rp: (Math.round(targetList[i].boosts.rp * 100) / 100) + ' / ' + targetList[i].valueSet.rp,
+            value: decString(targetList[i].value)
+        };
+        comparison.push(target);
+    }
+    console.table(comparison);
 }
