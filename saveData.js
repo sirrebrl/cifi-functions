@@ -11,7 +11,8 @@ const blankPlayer =
             fastLoop: [0, 0, 0, 0, 0],
             roSeven: 0,
             gCorp: 0,
-            beta: 0
+            beta: 0,
+            rop: 0
         },
     cellGoal: new Decimal(1),
     timing:
@@ -19,6 +20,12 @@ const blankPlayer =
             tick: 8,
             op: 65,
             study: 10
+        },
+    hephaestus:
+        {
+            crew: 0,
+            machina: 0,
+            blueprints: 0
         },
     demeter:
         {
@@ -120,4 +127,41 @@ function ClearShardPriorities()
     SavePlayerData();
 }
 
-function SetKoiosData(crew, drill, brainium, multiStudy) { playerData.koios = { crew, drill, brainium, multiStudy}; SavePlayerData(); }
+function SetKoiosData(crew, drill, brainium, multiStudy)
+{ 
+    playerData.koios.crew = crew;
+    playerData.koios.drill = drill;
+    playerData.koios.brainium = brainium;
+    playerData.koios.multiStudy = multiStudy;
+    SavePlayerData(); 
+}
+
+const shardMS = 
+{
+    num(id) { return this[gameDB.milestones[id - 1].name]; }
+};
+
+function GenerateMilestoneAccess()
+{
+    for (let i = 0; i < gameDB.milestones.length; i++)
+    {
+        let milestoneName = gameDB.milestones[i].name;
+        shardMS[milestoneName] =
+        {
+            id: i,
+            name: milestoneName,
+            get lv() { return playerData.demeter.milestones[this.id]; },
+            set lv(val) { playerData.demeter.milestones[this.id] = val; SavePlayerData(); },
+            get nextTickCost()
+            {
+                return CalculateMilestoneTickCost(shardActiveState, this.id, this.lv);
+            },
+            get stageTickCost()
+            {
+                return CalculateMilestoneTickCost(shardActiveState, this.id, this.lv, GetMilestoneNextStage(this.id, this.lv));
+            }
+        };
+    }
+}
+
+GenerateMilestoneAccess();
