@@ -60,9 +60,9 @@ function ReorderResearchTargets(newOrder)
 
 function ResearchTime(goal, rate, studies, ticks, testing = false, evoTicks = 0)
 {
-    let hephBonus = playerData.hephaestus.crew * playerData.hephaestus.blueprints * ticks * 0.000002;
-    let koiBonus = playerData.koios.crew * playerData.koios.brainium * studies * 0.00001;
-    let ropBonus = playerData.mods.rop * studies * 0.01;
+    let hephBonus = playerData.hephaestus.crew * playerData.hephaestus.blueprints * ticks * 0.000002 + 1;
+    let koiBonus = playerData.koios.crew * playerData.koios.brainium * studies * 0.00001 + 1;
+    let ropBonus = playerData.mods.rop * studies * 0.01 + 1;
     let baseRate = rate / (hephBonus * koiBonus * ropBonus);
 
     let progTicks = 0;
@@ -75,9 +75,9 @@ function ResearchTime(goal, rate, studies, ticks, testing = false, evoTicks = 0)
         goal -= rate;
         studies += playerData.koios.multiStudy;
 
-        hephBonus = playerData.hephaestus.crew * playerData.hephaestus.blueprints * ticks * 0.000002;
-        koiBonus = playerData.koios.crew * playerData.koios.brainium * studies * 0.00001;
-        ropBonus = playerData.mods.rop * studies * 0.01;
+        hephBonus = playerData.hephaestus.crew * playerData.hephaestus.blueprints * ticks * 0.000002 + 1;
+        koiBonus = playerData.koios.crew * playerData.koios.brainium * studies * 0.00001 + 1;
+        ropBonus = playerData.mods.rop * studies * 0.01 + 1;
 
         if (evoTicks >= playerData.koios.evo.ticks) { baseRate *= playerData.koios.evo.power; playerData.koios.evo.ticks = 1e10; console.log('Evo!'); }
         rate = baseRate * (hephBonus * koiBonus * ropBonus);
