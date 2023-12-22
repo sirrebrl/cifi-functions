@@ -40,7 +40,7 @@ let gameDB =
                 startCost: 6,
                 costExp: 1.22,
                 expGrowth: 0.0022,
-                unlock: 0,
+                unlock: 5,
                 rarity: 0,
                 bonuses:
                 [
@@ -54,7 +54,7 @@ let gameDB =
                 startCost: 9,
                 costExp: 1.24,
                 expGrowth: 0.0026,
-                unlock: 0,
+                unlock: 10,
                 rarity: 0,
                 bonuses:
                 [
@@ -68,7 +68,7 @@ let gameDB =
                 startCost: 24,
                 costExp: 1.4,
                 expGrowth: 0.012,
-                unlock: 0,
+                unlock: 20,
                 rarity: 1,
                 bonuses:
                 [
@@ -83,7 +83,7 @@ let gameDB =
                 startCost: 40,
                 costExp: 1.26,
                 expGrowth: 0.0032,
-                unlock: 0,
+                unlock: 30,
                 rarity: 0,
                 bonuses:
                 [
@@ -97,7 +97,7 @@ let gameDB =
                 startCost: 80,
                 costExp: 1.26,
                 expGrowth: 0.0034,
-                unlock: 0,
+                unlock: 40,
                 rarity: 0,
                 bonuses:
                 [
@@ -111,7 +111,7 @@ let gameDB =
                 startCost: 140,
                 costExp: 1.5,
                 expGrowth: 0.025,
-                unlock: 0,
+                unlock: 50,
                 rarity: 1,
                 bonuses:
                 [
@@ -126,7 +126,7 @@ let gameDB =
                 startCost: 4000,
                 costExp: 2,
                 expGrowth: 0.038,
-                unlock: 0,
+                unlock: 120,
                 rarity: 2,
                 bonuses:
                 [
@@ -142,7 +142,7 @@ let gameDB =
                 startCost: 31000,
                 costExp: 1.5,
                 expGrowth: 0.016,
-                unlock: 0,
+                unlock: 150,
                 rarity: 0,
                 bonuses:
                 [
